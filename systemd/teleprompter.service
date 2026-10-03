@@ -1,0 +1,16 @@
+[Unit]
+Description=Teleprompter Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=teleprompter
+Group=teleprompter
+WorkingDirectory=/opt/teleprompter
+EnvironmentFile=/etc/teleprompter.env
+ExecStart=/opt/teleprompter/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8800 --workers 1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

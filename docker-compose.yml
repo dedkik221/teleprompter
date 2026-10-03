@@ -1,0 +1,21 @@
+services:
+  teleprompter:
+    build: .
+    container_name: teleprompter
+    restart: unless-stopped
+    ports:
+      - "8800:8800"
+    volumes:
+      - ./data:/app/data
+      - ./watch_lectures:/app/watch_lectures
+    environment:
+      - DATA_DIR=/app/data
+      - WATCH_DIR=/app/watch_lectures
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: teleprompter-tunnel
+    restart: unless-stopped
+    command: tunnel --url http://teleprompter:8800
+    depends_on:
+      - teleprompter

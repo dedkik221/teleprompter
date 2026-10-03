@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teleprompter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="/static/css/prompter.css">
+</head>
+<body data-theme="classic" data-view="editor">
+
+  <!-- ===== EDITOR VIEW ===== -->
+  <div id="editor-view">
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <h2>Teleprompter</h2>
+        <div class="sidebar-actions">
+          <button id="btn-new" title="New script">+ New</button>
+          <label id="btn-upload" title="Upload .txt">
+            Upload
+            <input type="file" id="file-input" accept=".txt" hidden>
+          </label>
+        </div>
+      </div>
+      <ul id="script-list"></ul>
+    </div>
+
+    <div id="editor-main">
+      <div id="editor-toolbar">
+        <input type="text" id="script-title" placeholder="Script title..." />
+        <button id="btn-delete" title="Delete script">Delete</button>
+        <button id="btn-add-marker" title="Insert marker">+ Marker</button>
+        <div class="spacer"></div>
+        <button id="btn-start-prompter" class="primary">Start Prompter</button>
+      </div>
+      <div id="editor-text" contenteditable="true" spellcheck="true" data-placeholder="Paste or type your script here..."></div>
+      <div id="editor-status">
+        <span id="word-count">0 words</span>
+        <span id="est-duration">~0 min</span>
+      </div>
+    </div>
+
+    <div id="settings-panel">
+      <h3>Settings</h3>
+
+      <label>Font Size <span id="val-font-size">60</span>px</label>
+      <input type="range" id="set-font-size" min="20" max="120" value="60">
+
+      <label>Speed <span id="val-speed">10</span></label>
+      <input type="range" id="set-speed" min="1" max="50" value="10">
+
+      <label>Line Spacing <span id="val-line-spacing">1.4</span></label>
+      <input type="range" id="set-line-spacing" min="10" max="30" value="14" step="1">
+
+      <label>Text Width <span id="val-text-width">70</span>%</label>
+      <input type="range" id="set-text-width" min="30" max="100" value="70">
+
+      <label>Focus Line <span id="val-focus-pos">50</span>%</label>
+      <input type="range" id="set-focus-pos" min="10" max="90" value="50">
+
+      <h3>Color Theme</h3>
+      <div id="theme-presets">
+        <button class="theme-btn active" data-theme="classic" style="background:#0c0d0f;color:#e8ecf0;">Dark</button>
+        <button class="theme-btn" data-theme="amber" style="background:#0a0908;color:#f0c860;">Amber</button>
+        <button class="theme-btn" data-theme="paper" style="background:#f5f0e8;color:#2a2420;">Paper</button>
+        <button class="theme-btn" data-theme="high-contrast" style="background:#000;color:#ff0;">Hi-Con</button>
+        <button class="theme-btn" data-theme="sepia" style="background:#efe4d0;color:#4a3828;">Sepia</button>
+      </div>
+      <div class="color-custom">
+        <label>Text <input type="color" id="set-text-color" value="#ffffff"></label>
+        <label>BG <input type="color" id="set-bg-color" value="#000000"></label>
+      </div>
+
+      <h3>Keyboard Shortcuts</h3>
+      <div id="shortcuts-info">
+        <small>Space: Play/Pause | Arrows: Speed/Font | R: Reset | F: Fullscreen | M: Mirror | D: Dim | Esc: Exit</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PROMPTER VIEW ===== -->
+  <div id="prompter-view" class="hidden">
+    <div id="prompter-overlay-top" class="overlay"></div>
+    <div id="prompter-overlay-bottom" class="overlay"></div>
+    <div id="prompter-focus-line"></div>
+
+    <div id="prompter-viewport">
+      <div id="prompter-content"></div>
+    </div>
+
+    <div id="prompter-markers"></div>
+
+    <div id="prompter-hud">
+      <div class="hud-left">
+        <span id="hud-clock">00:00:00</span>
+      </div>
+      <div class="hud-center">
+        <button id="hud-rewind" title="Rewind 5 lines (Backspace/Z)">⟲ Rewind</button>
+        <button id="hud-reset" title="Reset (R)">Reset</button>
+        <button id="hud-play" title="Play/Pause (Space)">Play</button>
+        <span id="hud-speed-label">Speed: <span id="hud-speed-val">10</span></span>
+        <span id="hud-font-label">Font: <span id="hud-font-val">60</span></span>
+      </div>
+      <div class="hud-right">
+        <button id="hud-flip-x" title="Mirror X (M)">Flip X</button>
+        <button id="hud-flip-y" title="Flip Y">Flip Y</button>
+        <button id="hud-dim" title="Dim (D)">Dim</button>
+        <button id="hud-fullscreen" title="Fullscreen (F)">Full</button>
+        <button id="hud-remote" title="Remote Control">Remote</button>
+        <button id="hud-exit" title="Exit (Esc)">Exit</button>
+      </div>
+    </div>
+
+    <!-- Remote QR Modal -->
+    <div id="remote-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Remote Control</h3>
+        <p>Scan with your phone or open the URL:</p>
+        <div id="qr-container"></div>
+        <input type="text" id="remote-url" readonly>
+        <p>Session: <strong id="session-code"></strong></p>
+        <button id="modal-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/vendor/qrcode.min.js"></script>
+  <script src="/static/js/settings.js"></script>
+  <script src="/static/js/editor.js"></script>
+  <script src="/static/js/prompter.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

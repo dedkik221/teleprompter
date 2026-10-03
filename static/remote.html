@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Teleprompter — Remote</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/remote.css">
+</head>
+<body>
+  <div id="remote-app">
+    <div id="connect-screen">
+      <h1>Teleprompter</h1>
+      <p>Enter the session code from the prompter:</p>
+      <input type="text" id="session-input" maxlength="6" placeholder="ABC123" autocapitalize="characters" autocomplete="off">
+      <button id="btn-connect">Connect</button>
+      <p id="connect-status" class="status"></p>
+    </div>
+
+    <div id="control-screen" class="hidden">
+      <div class="status-bar">
+        <span id="remote-status">Connected</span>
+        <span id="remote-progress">0%</span>
+      </div>
+
+      <div class="state-display">
+        <div id="remote-play-state" class="state-label">Paused</div>
+        <div>Speed: <strong id="remote-speed">20</strong> &middot; Font: <strong id="remote-font">60</strong></div>
+      </div>
+
+      <div class="controls-grid">
+        <button id="r-play" class="big-btn play-btn">Play</button>
+        <button id="r-rewind" class="big-btn">⟲ Rewind</button>
+        <button id="r-reset" class="big-btn">Reset</button>
+      </div>
+
+      <div class="controls-row">
+        <button id="r-speed-down" class="med-btn">Speed -</button>
+        <button id="r-speed-up" class="med-btn">Speed +</button>
+      </div>
+      <div class="controls-row">
+        <button id="r-font-down" class="med-btn">Font -</button>
+        <button id="r-font-up" class="med-btn">Font +</button>
+      </div>
+      <div class="controls-row">
+        <button id="r-flip-x" class="sm-btn">Flip X</button>
+        <button id="r-flip-y" class="sm-btn">Flip Y</button>
+        <button id="r-dim" class="sm-btn">Dim</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+
+    let ws = null;
+    let sessionId = null;
+
+    // Auto-connect if code in URL
+    const pathCode = location.pathname.split('/remote/')[1];
+    if (pathCode && pathCode.length === 6) {
+      document.addEventListener('DOMContentLoaded', () => {
+        $('#session-input').value = pathCode.toUpperCase();
+        connect();
+      });
+    }
+
+    $('#btn-connect')?.addEventListener?.('click', connect);
+    document.addEventListener('DOMContentLoaded', () => {
+      $('#btn-connect').addEventListener('click', connect);
+      $('#session-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') connect();
+      });
+
+      // Controls
+      $('#r-play').addEventListener('click', () => send({ type: 'toggle' }));
+      $('#r-rewind').addEventListener('click', () => send({ type: 'rewind' }));
+      $('#r-reset').addEventListener('click', () => send({ type: 'reset' }));
+      $('#r-speed-up').addEventListener('click', () => send({ type: 'speed_up' }));
+      $('#r-speed-down').addEventListener('click', () => send({ type: 'speed_down' }));
+      $('#r-font-up').addEventListener('click', () => send({ type: 'font_up' }));
+      $('#r-font-down').addEventListener('click', () => send({ type: 'font_down' }));
+      $('#r-flip-x').addEventListener('click', () => send({ type: 'flip_x' }));
+      $('#r-flip-y').addEventListener('click', () => send({ type: 'flip_y' }));
+      $('#r-dim').addEventListener('click', () => send({ type: 'dim' }));
+    });
+
+    function connect() {
+      sessionId = $('#session-input').value.trim().toUpperCase();
+      if (sessionId.length !== 6) {
+        $('#connect-status').textContent = 'Enter a 6-character code';
+        return;
+      }
+      $('#connect-status').textContent = 'Connecting...';
+
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${proto}//${location.host}/ws/${sessionId}`);
+
+      ws.onopen = () => {
+        $('#connect-screen').classList.add('hidden');
+        $('#control-screen').classList.remove('hidden');
+        send({ type: 'request_state' });
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'state') updateState(msg);
+        } catch {}
+      };
+
+      ws.onclose = () => {
+        $('#remote-status').textContent = 'Disconnected';
+        $('#remote-status').classList.add('error');
+        setTimeout(() => {
+          if (sessionId) connect();
+        }, 3000);
+      };
+
+      ws.onerror = () => {
+        $('#connect-status').textContent = 'Connection failed';
+      };
+    }
+
+    function send(msg) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+    }
+
+    function updateState(state) {
+      $('#remote-play-state').textContent = state.playing ? 'Playing' : 'Paused';
+      $('#remote-play-state').classList.toggle('active', state.playing);
+      $('#r-play').textContent = state.playing ? 'Pause' : 'Play';
+      $('#r-play').classList.toggle('active', state.playing);
+      $('#remote-speed').textContent = state.speed;
+      $('#remote-font').textContent = state.fontSize;
+      $('#remote-progress').textContent = Math.round(state.progress * 100) + '%';
+    }
+  </script>
+</body>
+</html>
